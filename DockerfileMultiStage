@@ -1,11 +1,20 @@
-FROM maven:3 as BUILD_IMAGE
-ENV APP_HOME=/root/dev/myapp/
-RUN mkdir -p $APP_HOME/src/main/java
-WORKDIR $APP_HOME
-COPY . .
-RUN mvn -B package -e -X --file my-app/pom.xml
+FROM maven:3 AS base
+WORKDIR /app
+COPY pom.xml .
+RUN mvn dependency:go-offline
+COPY src ./src
+
+FROM base AS test
+RUN mvn test
+
+FROM base AS lint
+RUN mvn checkstyle:check
+
+FROM base AS build
+RUN mvn clean package -DskipTests
+#RUN mvn -B package -e -X --file my-app/pom.xml
 
 FROM openjdk:8-jre
-WORKDIR /root/
-COPY --from=BUILD_IMAGE /root/dev/myapp/my-app/target/my-app*.jar .
-CMD java -jar my-app*.jar
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+ENTRYPOINT ["java", "-jar", "app.jar"]
