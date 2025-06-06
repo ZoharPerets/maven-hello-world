@@ -1,10 +1,6 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9.6-eclipse-temurin-17-alpine' // Docker image to use
-            
-        }
-    }
+    agent any 
+    
     environment {
         IMAGE_NAME = 'myapp'
         DOCKERFILE_PATH = 'DockerfileMultiStage'
@@ -21,7 +17,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${IMAGE_NAME}:${TAG}", "-f ${DOCKERFILE_PATH} .")
+                    docker.image('docker:24.0.2').inside('-v /var/run/docker.sock:/var/run/docker.sock') {
+                        sh 'docker build -t ${IMAGE_NAME}:${TAG} -f ${DOCKERFILE_PATH} .'
+                    }
                 }
             }
         }  
